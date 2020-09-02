@@ -4,6 +4,7 @@ exports.up = function(knex) {
         t.integer("article_id")
         t.bigInteger("reference_time")
         t.float('score', 8, 3)
+        t.string('mode')
 
         t.foreign('article_id').references("id").inTable("article").onDelete("CASCADE").onUpdate("CASCADE");
         t.foreign('reference_time').references("time").inTable("reference").onDelete("CASCADE").onUpdate("CASCADE");

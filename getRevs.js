@@ -112,7 +112,7 @@ async function importRandom(n=0){
         await randomRevs()
     }
     await knex('reference').insert({time:ref})
-    knex.destroy()
+    // knex.destroy()
 }
 
 module.exports = {getRevs, importRandom}
