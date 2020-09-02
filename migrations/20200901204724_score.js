@@ -9,7 +9,7 @@ exports.up = function(knex) {
         t.foreign('article_id').references("id").inTable("article").onDelete("CASCADE").onUpdate("CASCADE");
         t.foreign('reference_time').references("time").inTable("reference").onDelete("CASCADE").onUpdate("CASCADE");
 
-        t.primary(["article_id","reference_time"])
+        t.primary(["article_id","reference_time","mode"])
     })
 };
 

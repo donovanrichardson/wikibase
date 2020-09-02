@@ -105,10 +105,14 @@ async function randomRevs(){
 async function importRandom(n=0){
     const ref = Math.floor(Date.now()/1000)
     const arts = await knex('article').select('id')
-    for (i = 0;i < arts.length; i ++){
+    // console.log(arts);
+    const limit = arts.length
+    for (let i = 0;i < limit; i ++){
+        console.log(`${i+1} out of ${arts.length}`);
         await getRevs(arts[i].id)
     }
-    for(j = 0; j < n; j++){
+    for(let j = 0; j < n; j++){
+        console.log(`${j+1} out of ${n}`);
         await randomRevs()
     }
     await knex('reference').insert({time:ref})

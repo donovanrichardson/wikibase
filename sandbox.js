@@ -5,12 +5,15 @@ const prompt = require('prompt-sync')();
 
 const {importRandom} = require('./getRevs')
 
-const {getAllTimeScores, getFourWeekScores} = require('./analysis')
+const {getAllTimeScores, getYearlyScores, getTYM} = require('./analysis')
 
-getAllTimeScores()
+// getAllTimeScores()
+getYearlyScores()
 
 
-// importRandom(100)
+// getTYM()
+
+// importRandom(50)
 
 
 // randomRevs()
