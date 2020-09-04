@@ -8,10 +8,10 @@ const {importRandom} = require('./getRevs')
 const {getAllTimeScores, getYearlyScores, getTYM} = require('./analysis')
 
 // getAllTimeScores()
-getYearlyScores()
+// getYearlyScores()
 
 
-// getTYM()
+getTYM()
 
 // importRandom(50)
 

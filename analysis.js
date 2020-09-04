@@ -25,7 +25,7 @@ async function allTimeAverage(articleIds, ref){
         console.log('score already exists');
         return alreadyExists
     } else{
-        for (i = 0; i < articleIds.length; i++){ //i should take account of the fact that some may go beyond reference time by stipulating before reference time
+        for (let i = 0; i < articleIds.length; i++){ //i should take account of the fact that some may go beyond reference time by stipulating before reference time
             // console.log(`the rep is ${i}`);
             let ts = await knex('revision').select('timestamp', 'diff').where({article_id:articleIds[i]}).where("timestamp", "<", ref).orderBy('timestamp', 'desc')//previously this filtered out null, but that was wrong. now the last member is popped after potentially being used, just lik in the above median function.
             const newdiff = ts[0] ? (Number(ref)-Number(ts[0].timestamp)):Number(ref)//to handle the situation where there is only one revision and none without null diff //Number still has the BigInt problem
@@ -57,7 +57,7 @@ async function yearlyAverage(articleIds, ref){
         const forInsertion = []
         let rejected = 0
         let accepted = 0
-        for (i = 0; i < articleIds.length; i++){
+        for (let i = 0; i < articleIds.length; i++){
             console.log(`accepted:${accepted}\nrejected:${rejected}\nremaining:${articleIds.length- accepted -rejected}`);
         
             const oldest = await knex('revision').select('timestamp', 'diff').where({article_id:articleIds[i]}).where('timestamp', '<', start).orderBy('timestamp', 'desc').first()
@@ -70,22 +70,36 @@ async function yearlyAverage(articleIds, ref){
             const refrecord = {timestamp:ref, diff:ref-latest.timestamp}
             const revisions = await knex('revision').select('timestamp', 'diff').where({article_id:articleIds[i]}).where('timestamp', '<', ref).where('timestamp','>=',start ).orderBy('timestamp', 'desc')
             revisions.unshift(refrecord)
-            const wholeDiff = revisions[revisions.length -1].diff
-            const forwardDiff = Number(revisions[revisions.length -1].timestamp) - start
-            revisions[revisions.length - 1].diff = forwardDiff
-            const revisionDiffs = revisions.map(p=>p.diff)
-            const denom = sum(revisionDiffs)
-            revisionDiffs.pop()
-            let numerator = sum(revisionDiffs.map(p=>p*p))
-            const leftovers = (2*wholeDiff * forwardDiff) - (forwardDiff * forwardDiff)
-            numerator += leftovers;
-            forInsertion.push({article_id:articleIds[i],score:numerator/denom,reference_time:ref, mode:mode})
+            // const wholeDiff = revisions[revisions.length -1].diff
+            // const forwardDiff = Number(revisions[revisions.length -1].timestamp) - start
+            // revisions[revisions.length - 1].diff = forwardDiff
+            // const revisionDiffs = revisions.map(p=>p.diff)
+            // const denom = sum(revisionDiffs)
+            // revisionDiffs.pop()
+            // let numerator = sum(revisionDiffs.map(p=>p*p))
+            // const leftovers = (2*wholeDiff * forwardDiff) - (forwardDiff * forwardDiff)
+            // numerator += leftovers;
+            const theScore = choppedScore(revisions, start)
+            forInsertion.push({article_id:articleIds[i],score:theScore,reference_time:ref, mode:mode})
         }
         console.log(await knex('score').insert(forInsertion).returning('*')) //or this can be done in one insert
     }
 }
 
-async function twoYearMedian(articleIds, ref){
+function choppedScore(revisions, start){
+    const wholeDiff = revisions[revisions.length -1].diff
+    const forwardDiff = Number(revisions[revisions.length -1].timestamp) - start
+    revisions[revisions.length - 1].diff = forwardDiff
+    const revisionDiffs = revisions.map(p=>p.diff)
+    const denom = sum(revisionDiffs)
+    revisionDiffs.pop()
+    let numerator = sum(revisionDiffs.map(p=>p*p))
+    const leftovers = (2*wholeDiff * forwardDiff) - (forwardDiff * forwardDiff)
+    numerator += leftovers;
+    return numerator/denom
+}
+
+async function twoYearMedian(articleIds, ref){  //articleIds needed for callback to work correctly
     // const artid = 64104713
     // const artid = 52231773
     const mid = ref - (60*60*24*365)
@@ -100,25 +114,26 @@ async function twoYearMedian(articleIds, ref){
         const refrecord1 = {timestamp:ref, diff:ref-latest.timestamp}
         const revisions1 = await knex('revision').select('timestamp', 'diff').where({article_id:artid}).where('timestamp', '<', ref).where('timestamp','>=',mid ).orderBy('timestamp', 'desc')
         revisions1.unshift(refrecord1)
-        const wholeDiff1 = revisions1[revisions1.length -1].timestamp
-        const forwardDiff1 = wholeDiff1 - mid
-        revisions1[revisions1.length - 1].diff = forwardDiff1
-        const revisionDiffs1 = revisions1.map(p=>p.diff)
-        const denom1 = sum(revisionDiffs1)
-        revisionDiffs1.pop()
-        const numerator1 = sum(revisionDiffs1.map(p=>p*p))
+        // const wholeDiff1 = revisions1[revisions1.length -1].timestamp
+        // const forwardDiff1 = wholeDiff1 - mid
+        // revisions1[revisions1.length - 1].diff = forwardDiff1
+        // const revisionDiffs1 = revisions1.map(p=>p.diff)
+        // const denom1 = sum(revisionDiffs1)
+        // revisionDiffs1.pop()
+        const bignumer = choppedScore(revisions1, mid)
+
     
         const median = await knex('revision').select('timestamp', 'diff').where({article_id:artid}).where('timestamp', '<', mid).orderBy('timestamp', 'desc').first()
         const refrecord2 = {timestamp:mid, diff:mid-median.timestamp}
         const revisions2 = await knex('revision').select('timestamp', 'diff').where({article_id:artid}).where('timestamp', '<', mid).where('timestamp','>=',start ).orderBy('timestamp', 'desc')
         revisions2.unshift(refrecord2)
-        const wholeDiff2 = revisions2[revisions2.length -1].timestamp
-        const forwardDiff2 = wholeDiff2 - start
-        revisions2[revisions2.length - 1].diff = forwardDiff2
-        const revisionDiffs2 = revisions2.map(p=>p.diff)
-        const denom2 = sum(revisionDiffs2)
-        revisionDiffs2.pop()
-        const numerator2 = sum(revisionDiffs2.map(p=>p*p))
+        // const wholeDiff2 = revisions2[revisions2.length -1].timestamp
+        // const forwardDiff2 = wholeDiff2 - start
+        // revisions2[revisions2.length - 1].diff = forwardDiff2
+        // const revisionDiffs2 = revisions2.map(p=>p.diff)
+        // const denom2 = sum(revisionDiffs2)
+        // revisionDiffs2.pop()
+        // const numerator2 = sum(revisionDiffs2.map(p=>p*p))
         //get the plain sum of the revision diffs
         // pop the last from revisions
         //get the sum of squares of revisions
@@ -132,7 +147,15 @@ async function twoYearMedian(articleIds, ref){
         // console.log(revisions2.filter(p=>p.diff>10000));
         // console.log((numerator2/denom2)/(60*60),(numerator2/denom2));
         // console.log((numerator1/denom1)/(numerator2/denom2));
-        console.log(await knex('score').insert({article_id:artid,score:(numerator1/denom1)/(numerator2/denom2),reference_time:ref, mode:mode}).returning('*'));
+        const bigdenom = choppedScore(revisions2, start)
+        const thescore =  bignumer/bigdenom
+        console.log(`${artid}: ${thescore}`);
+        // if (thescore < .1){
+        //     // console.log(numerator1,denom1);
+        // }
+        // console.log(
+            await knex('score').insert({article_id:artid,score:thescore,reference_time:ref, mode:mode}).returning('*')
+            // );
 
     }
 }

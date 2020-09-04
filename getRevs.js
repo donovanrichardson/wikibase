@@ -11,10 +11,10 @@ async function addDiffs(article){
             console.log(noDiffs);
             if(noDiffs.length > 1){
                 noDiffs.shift()
+                noDiffs[0].diff = Number(noDiffs[0].timestamp) - Number(recent.timestamp)
              } //in this case the earliest timestamp with null is the first revision. If the length is 1, this cannot be the case.
-            noDiffs[0].diff = Number(noDiffs[0].timestamp) - Number(recent.timestamp)
         }
-        for(i = 1; i < noDiffs.length;i++){
+        for(let i = 1; i < noDiffs.length;i++){
             noDiffs[i].diff = Number(noDiffs[i].timestamp) - Number(noDiffs[i-1].timestamp)
         }
     
@@ -27,12 +27,47 @@ async function addDiffs(article){
                 })
                 await Promise.all(diffs)
                 console.log(`${noDiffs.length - 1} revisions added`); //take away the art's first revision
+                console.log("a diff", noDiffs);
             })
         } catch (err) {
             console.error(err)
         }
     }
 }
+
+async function fakeDiffs(article){
+    let noDiffs = await knex('revision').select('id', 'timestamp').where({article_id:article}).orderBy('timestamp')
+    const recent = false
+    if (noDiffs.length > 0){
+        if (recent){
+            console.log(noDiffs);
+            if(noDiffs.length > 1){
+                noDiffs.shift()
+             } //in this case the earliest timestamp with null is the first revision. If the length is 1, this cannot be the case.
+            noDiffs[0].diff = Number(noDiffs[0].timestamp) - Number(recent.timestamp)
+        }
+        for(let i = 1; i < noDiffs.length;i++){
+            noDiffs[i].diff = Number(noDiffs[i].timestamp) - Number(noDiffs[i-1].timestamp)
+        }
+    
+        // noDiffs = noDiffs.filter(d => d.diff)
+        console.log(noDiffs);
+    }
+}
+
+// addDiffs(48848273)
+// fakeDiffs(48848273)
+
+async function addAllDiffs(){
+    const arts = await knex('article').select('id')
+    console.log(arts);
+    for(let a = 0; a < arts.length; a++){
+        await addDiffs(arts[a].id)
+    }
+}
+
+// addAllDiffs()
+
 
 async function getRevs(pageid, latest, cont){
     // console.log(pageid);
