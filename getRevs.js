@@ -182,7 +182,7 @@ async function categories(){
     const pageids = []
     const rootCat = prompt() //the category //convert to number?
     if (rootCat){ //handles entry of no category
-        pageids.push(rootcat)
+        pageids.push(rootCat)
     }
     const traversed = []
     
