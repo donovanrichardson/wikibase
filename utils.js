@@ -1,4 +1,5 @@
-const config = require('./knexfile.js')['development']
+require("dotenv").config();
+const config = require('./knexfile.js')[process.env.NODE_ENV]
 var knex = require('knex')(config);
 
 async function upsert(insertion){

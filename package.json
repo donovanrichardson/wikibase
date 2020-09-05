@@ -5,13 +5,19 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "prestart": "knex migrate:latest",
+    "start": "node server.js",
+    "import": "node import",
+    "score": "node score"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.20.0",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
     "knex": "^0.21.5",
     "pg": "^8.3.3",
     "prompt-sync": "^4.2.0"

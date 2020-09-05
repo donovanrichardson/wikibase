@@ -1,14 +1,16 @@
 const {upsert} = require('./utils')
-const config = require('./knexfile.js')['development']
+require("dotenv").config();
+const config = require('./knexfile.js')[process.env.NODE_ENV]
 var knex = require('knex')(config);
 const axios = require('axios').default;
+const prompt = require('prompt-sync')();
 
 async function addDiffs(article){
     let noDiffs = await knex('revision').select('id', 'timestamp').where({article_id:article}).whereNull('diff').orderBy('timestamp')
     const recent = await knex('revision').select().whereNotNull('diff').where({article_id:article}).orderBy('diff', 'DESC').first()
     if (noDiffs.length > 0){
         if (recent){
-            console.log(noDiffs);
+            // console.log(noDiffs);
             if(noDiffs.length > 1){
                 noDiffs.shift()
                 noDiffs[0].diff = Number(noDiffs[0].timestamp) - Number(recent.timestamp)
@@ -27,7 +29,7 @@ async function addDiffs(article){
                 })
                 await Promise.all(diffs)
                 console.log(`${noDiffs.length - 1} revisions added`); //take away the art's first revision
-                console.log("a diff", noDiffs);
+                // console.log("a diff", noDiffs);
             })
         } catch (err) {
             console.error(err)
@@ -80,7 +82,7 @@ async function getRevs(pageid, latest, cont){
         const artExists = await knex('article').select().where({id:pageid}).first();
         if(!artExists){
             const info = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids=${pageid}&format=json`)
-            await knex('article').insert({id:pageid, title:info.data.query.pages[pageid].title})
+            await upsert(knex('article').insert({id:pageid, title:info.data.query.pages[pageid].title}))
         }
         const latestQ = knex('revision').select().whereNotNull('diff').where({article_id:pageid}).orderBy('id', 'DESC')
         // console.log(latestQ.toQuery());
@@ -109,7 +111,9 @@ async function getRevs(pageid, latest, cont){
         })
 
         if(latest && !res.data.continue){ //if query retrieved additional revisions to an article (with rvendid param) and has accessed the last requested revision (no rvcontinue), then the last revision will be the revision specified in rvendid, rather than its child revision. this pops that revision from the revs array to avoid violating the unique constraint in the db. I am not sure that it is impossible for two edits on the same article to occur the same second (which would cause the rvendid param to include any edits occuring at the same second), but because of Wiki's conflict warning system, I think this is highly unlikely.
-            console.log(revs.pop())
+            // console.log(
+                revs.pop()
+                // )
 
         } 
 
@@ -126,7 +130,7 @@ async function getRevs(pageid, latest, cont){
 }
 
 async function randomRevs(){
-    console.log('how many times is this done');
+    // console.log('how many times is this done');
     const randomArt = await axios.get('https://en.wikipedia.org/w/api.php?action=query&format=json&rnnamespace=0&list=random')
 
     // console.log(randomArt.data);
@@ -151,7 +155,97 @@ async function importRandom(n=0){
         await randomRevs()
     }
     await knex('reference').insert({time:ref})
+    // await knex.destroy() this doesnt work
+}
+
+async function importAll(){
+    const ref = Math.floor(Date.now()/1000)
+    const arts = await knex('article').select('id')
+    // console.log(arts);
+    const limit = arts.length
+    for (let i = 0;i < limit; i ++){
+        console.log(`${i+1} out of ${arts.length}`);
+        await getRevs(arts[i].id)
+    }
+    await knex('reference').insert({time:ref})
+    // await knex.destroy() this doesnt work
+}
+
+async function idsFromCategory(cat){
+    
+}
+
+async function categories(){
+    // console.log("enter a the name of a new domain (category)"); 
+    // const name = prompt() 
+    console.log("enter this category's page id");
+    const pageids = []
+    const rootCat = prompt() //the category //convert to number?
+    if (rootCat){ //handles entry of no category
+        pageids.push(rootcat)
+    }
+    const traversed = []
+    
+    // const domain = await knex('domain').select().where({id:pageids[0]}).returning('*')
+    // if(domain[0]){
+    //     return;
+    // }
+    // console.log('knex domain??');
+    // await knex('domain').insert({id:pageids[0], name:name})
+    //below gets the subcats
+    for(i = 0; i < pageids.length; i++){ //length increases as elements are added
+        const catsq = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&cmlimit=500&list=categorymembers&cmpageid=${pageids[i]}&cmtype=subcat&format=json`)
+        // console.log(catsq, pageids[i]);
+        const theCats = catsq.data.query.categorymembers
+        // console.log(theCats);
+        
+        theCats.forEach(c=>{
+            console.log(`${i+1} out of ${pageids.length}`);
+            if(traversed.includes(c.pageid)){
+                return; //don't add the same category twice if it's a subcat of several categories
+            }
+            console.log(c.title);
+            console.log("input any key to reject. enter no input to accept");
+            const r = prompt()//"enter any key to reject. press enter to accept"
+            if(!r){
+                // console.log(c.pageid);
+                pageids.push(c.pageid)
+            }else{
+                console.log('rejected');
+            }
+            traversed.push(c.pageid)
+        })
+        // traversed.push(pageids[i]) //not necessary. it's not likely that there will be a child category that includes the parent category. even so, the article would not be added.
+    }
+    const articles = []
+    // cmnamespace //below gets the articles
+    for(artidx = 0; artidx<pageids.length; artidx++){
+        const artsq = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&cmlimit=500&list=categorymembers&cmpageid=${pageids[artidx]}&cmnamespace=0&format=json`)
+        const theArts = artsq.data.query.categorymembers
+        theArts.forEach(c=>{
+            if(articles.includes(c.pageid)){
+                return;
+            }
+            console.log(c.title);
+            articles.push({
+                id:c.pageid,
+                title:c.title
+            })
+        })
+        console.log(articles.length);
+    }
+
+    await upsert(knex('article').insert(articles))
+    await importAll()
+    // i could return the articles do this functionality in a different method
+
+    // const time = Math.floor(Date.now()/1000)
+    // for(artjdx = 0; artjdx < articles.length; artjdx++){
+    //     await getRevs(articles[artjdx])
+    // }
+    // console.log(pageids);
+    // await knex('reference').insert({time:time})
     // knex.destroy()
 }
 
-module.exports = {getRevs, importRandom}
+module.exports = {getRevs, importRandom, categories}
