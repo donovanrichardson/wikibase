@@ -18,7 +18,7 @@ app.get("/most_edited", async (req, res)=>{
 })
 
 app.get("/trending", async (req, res)=>{
-    const trend = await knex.raw("select score.score, score.reference_time, article.title from score join score s2 on score.article_id = s2.article_id join article on score.article_id = article.id where score.mode = '4 week trend ratio' and s2.mode = '4 week average' and s2.score < 42 * 3600 and score.score < 1 and score.reference_time = (select max(reference_time) from score) order by score.score")
+    const trend = await knex.raw("select score.score, score.reference_time, article.title from score join score s2 on score.article_id = s2.article_id join article on score.article_id = article.id where score.mode = '4 week trend ratio' and s2.mode = '4 week average' and s2.score < 84 * 3600 and score.score < 1 and score.reference_time = (select max(reference_time) from score) order by score.score")
 
     res.send(trend.rows)
 
