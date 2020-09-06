@@ -236,9 +236,9 @@ function xWeeklyAvgPeriod(weeks){
             // const leftovers = (2*wholeDiff * forwardDiff) - (forwardDiff * forwardDiff)
             // numerator += leftovers;
             const theScore = choppedScore(revisions, start)
-            forInsertion.push({article_id:articleIds[i],score:theScore,reference_time:ref, mode:mode})
+            await knex('score').insert({article_id:articleIds[i],score:theScore,reference_time:ref, mode:mode})
         }
-        console.log(await knex('score').insert(forInsertion).returning('*')) //or this can be done in one insert
+        // console.log(await knex('score').insert(forInsertion).returning('*')) //or this can be done in one insert
     }
     }
 }
