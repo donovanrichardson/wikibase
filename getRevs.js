@@ -235,7 +235,9 @@ async function categories(){
         console.log(articles.length);
     }
 
-    await upsert(knex('article').insert(articles))
+    if(articles.length){
+        await upsert(knex('article').insert(articles))
+    }
     await importAll()
     // i could return the articles do this functionality in a different method
 

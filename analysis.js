@@ -53,7 +53,7 @@ async function yearlyAverage(articleIds, ref){
     const alreadyExists = await refExists(ref, mode)
     if(alreadyExists){
         console.log(alreadyExists)
-        console.log(alreadyExists.toQuery())
+        // console.log(alreadyExists.toQuery())
     } else{
         const start = ref - (60*60*24*365)
         const forInsertion = []
